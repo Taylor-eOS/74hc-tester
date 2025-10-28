@@ -7,8 +7,6 @@ LED_COUNT = 1
 
 np = NeoPixel(Pin(LED_PIN), LED_COUNT)
 
-CHIP = "74HC04"
-
 def set_color(col):
     np[0] = col
     np.write()
@@ -101,6 +99,54 @@ def test_74hc04():
         pin_in.value(0)
     return contact_detected, working_gates
 
+def test_74hc164():
+    output_pins = [3, 4, 5, 6, 10, 11, 12, 13]
+    out_pins = {p: Pin(p, Pin.IN, Pin.PULL_DOWN) for p in output_pins}
+    def read_outputs():
+        return [out_pins[p].value() for p in output_pins]
+    clr_pin = Pin(9, Pin.OUT)
+    clk_pin = Pin(8, Pin.OUT)
+    data_pin1 = Pin(1, Pin.OUT)
+    data_pin2 = Pin(2, Pin.OUT)
+    clr_pin.value(1)
+    clk_pin.value(0)
+    data_pin1.value(0)
+    data_pin2.value(0)
+    contact_detected = False
+    clr_pin.value(0)
+    time.sleep_ms(5)
+    clr_pin.value(1)
+    time.sleep_ms(5)
+    low_reads = [read_outputs() for _ in range(3)]
+    any_low_high = any(any(val == 1 for val in row) for row in low_reads)
+    if any_low_high:
+        contact_detected = True
+    low_zeros = sum(1 for v in low_reads[-1] if v == 0)
+    for _ in range(8):
+        data_pin1.value(1)
+        data_pin2.value(1)
+        time.sleep_ms(1)
+        clk_pin.value(1)
+        time.sleep_ms(5)
+        clk_pin.value(0)
+        time.sleep_ms(1)
+    data_pin1.value(0)
+    data_pin2.value(0)
+    time.sleep_ms(5)
+    high_reads = [read_outputs() for _ in range(3)]
+    any_high_one = any(any(val == 1 for val in row) for row in high_reads)
+    if any_high_one:
+        contact_detected = True
+    high_ones = sum(1 for v in high_reads[-1] if v == 1)
+    good_low = low_zeros >= 7
+    good_high = high_ones >= 7
+    working = 1 if good_low and good_high else 0
+    clr_pin.value(1)
+    clk_pin.value(0)
+    data_pin1.value(0)
+    data_pin2.value(0)
+    return contact_detected, working
+
 def main():
     set_color((32, 0, 0))
     last_contact = False
@@ -108,14 +154,7 @@ def main():
     stable_count = 0
     required_stable = 3
     while True:
-        if CHIP == "74HC14":
-            contact, working = test_74hc14()
-        elif CHIP == "74HC32":
-            contact, working = test_74hc32()
-        elif CHIP == "74HC04":
-            contact, working = test_74hc04()
-        else:
-            contact, working = False, 0
+        contact, working = test_74hc164()
         if contact == last_contact and working == last_working:
             stable_count += 1
         else:
