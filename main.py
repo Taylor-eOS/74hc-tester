@@ -41,6 +41,37 @@ def test_74hc14():
         pin_in.value(0)
     return contact_detected, working_gates
 
+def test_74hc32():
+    gates = [
+        {'in1': 1, 'in2': 2, 'out': 3},
+        {'in1': 4, 'in2': 5, 'out': 6},
+        {'in1': 8, 'in2': 9, 'out': 10},
+        {'in1': 11, 'in2': 12, 'out': 13}
+    ]
+    working_gates = 0
+    contact_detected = False
+    for gate in gates:
+        pin_in1 = Pin(gate['in1'], Pin.OUT)
+        pin_in2 = Pin(gate['in2'], Pin.OUT)
+        pin_out = Pin(gate['out'], Pin.IN, Pin.PULL_DOWN)
+        all_passed = True
+        for val1 in (0, 1):
+            for val2 in (0, 1):
+                pin_in1.value(val1)
+                pin_in2.value(val2)
+                time.sleep_ms(5)
+                out_val = pin_out.value()
+                expected = 1 if val1 or val2 else 0
+                if out_val != expected:
+                    all_passed = False
+                if out_val == 1:
+                    contact_detected = True
+        pin_in1.value(0)
+        pin_in2.value(0)
+        if all_passed:
+            working_gates += 1
+    return contact_detected, working_gates
+
 def main():
     set_color((32, 0, 0))
     last_contact = False
@@ -48,7 +79,8 @@ def main():
     stable_count = 0
     required_stable = 3
     while True:
-        contact, working = test_74hc14()
+        #contact, working = test_74hc14()
+        contact, working = test_74hc32()
         if contact == last_contact and working == last_working:
             stable_count += 1
         else:
