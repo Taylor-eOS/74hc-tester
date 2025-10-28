@@ -7,6 +7,8 @@ LED_COUNT = 1
 
 np = NeoPixel(Pin(LED_PIN), LED_COUNT)
 
+CHIP = "74HC04"
+
 def set_color(col):
     np[0] = col
     np.write()
@@ -72,6 +74,33 @@ def test_74hc32():
             working_gates += 1
     return contact_detected, working_gates
 
+def test_74hc04():
+    gates = [
+        {'in': 1, 'out': 2},
+        {'in': 3, 'out': 4},
+        {'in': 5, 'out': 6},
+        {'in': 9, 'out': 8},
+        {'in': 11, 'out': 10},
+        {'in': 13, 'out': 12}
+    ]
+    working_gates = 0
+    contact_detected = False
+    for gate in gates:
+        pin_in = Pin(gate['in'], Pin.OUT)
+        pin_out = Pin(gate['out'], Pin.IN, Pin.PULL_DOWN)
+        pin_in.value(0)
+        time.sleep_ms(5)
+        low_val = pin_out.value()
+        pin_in.value(1)
+        time.sleep_ms(5)
+        high_val = pin_out.value()
+        if any(v == 1 for v in (low_val, high_val)):
+            contact_detected = True
+        if low_val == 1 and high_val == 0:
+            working_gates += 1
+        pin_in.value(0)
+    return contact_detected, working_gates
+
 def main():
     set_color((32, 0, 0))
     last_contact = False
@@ -79,8 +108,14 @@ def main():
     stable_count = 0
     required_stable = 3
     while True:
-        #contact, working = test_74hc14()
-        contact, working = test_74hc32()
+        if CHIP == "74HC14":
+            contact, working = test_74hc14()
+        elif CHIP == "74HC32":
+            contact, working = test_74hc32()
+        elif CHIP == "74HC04":
+            contact, working = test_74hc04()
+        else:
+            contact, working = False, 0
         if contact == last_contact and working == last_working:
             stable_count += 1
         else:
@@ -98,3 +133,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
