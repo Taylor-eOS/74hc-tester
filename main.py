@@ -25,15 +25,18 @@ def test_74hc14():
     for gate in gates:
         pin_in = Pin(gate['in'], Pin.OUT)
         pin_out = Pin(gate['out'], Pin.IN, Pin.PULL_DOWN)
-        pin_in.value(0)
-        time.sleep_ms(5)
-        result_when_low = pin_out.value()
-        pin_in.value(1)
-        time.sleep_ms(5)
-        result_when_high = pin_out.value()
-        if result_when_low == 1 or result_when_high == 1:
+        results_low = []
+        results_high = []
+        for _ in range(3):
+            pin_in.value(0)
+            time.sleep_ms(5)
+            results_low.append(pin_out.value())
+            pin_in.value(1)
+            time.sleep_ms(5)
+            results_high.append(pin_out.value())
+        if any(r == 1 for r in results_low + results_high):
             contact_detected = True
-        if result_when_low == 1 and result_when_high == 0:
+        if all(r == 1 for r in results_low) and all(r == 0 for r in results_high):
             working_gates += 1
         pin_in.value(0)
     return contact_detected, working_gates
